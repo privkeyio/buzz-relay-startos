@@ -15,8 +15,15 @@ export const seedFiles = sdk.setupOnInit(async (effects, kind) => {
       }),
       s3AccessKey: utils.getDefaultString({ charset: 'a-z,A-Z,0-9', len: 20 }),
       s3SecretKey: utils.getDefaultString({ charset: 'a-z,A-Z,0-9', len: 40 }),
+      relayPrivateKey: utils.getDefaultString({ charset: 'a-f,0-9', len: 64 }),
     })
   } else {
-    await storeJson.merge(effects, {})
+    // Backfill for installs that predate the relay identity key.
+    const existing = await storeJson.read().once()
+    await storeJson.merge(effects, {
+      relayPrivateKey:
+        existing?.relayPrivateKey ??
+        utils.getDefaultString({ charset: 'a-f,0-9', len: 64 }),
+    })
   }
 })

@@ -19,8 +19,20 @@ export const main = sdk.setupMain(async ({ effects }) => {
   const store = await storeJson.read().const(effects)
   if (!store) throw new Error('no store.json')
 
-  const { postgresPassword, redisPassword, s3AccessKey, s3SecretKey } = store
-  if (!postgresPassword || !redisPassword || !s3AccessKey || !s3SecretKey) {
+  const {
+    postgresPassword,
+    redisPassword,
+    s3AccessKey,
+    s3SecretKey,
+    relayPrivateKey,
+  } = store
+  if (
+    !postgresPassword ||
+    !redisPassword ||
+    !s3AccessKey ||
+    !s3SecretKey ||
+    !relayPrivateKey
+  ) {
     throw new Error('store.json is missing generated credentials')
   }
 
@@ -95,6 +107,10 @@ export const main = sdk.setupMain(async ({ effects }) => {
     BUZZ_METRICS_PORT: String(metricsPort),
     DATABASE_URL: `postgres://${postgresUser}:${postgresPassword}@127.0.0.1:${postgresPort}/${postgresDb}`,
     REDIS_URL: `redis://:${redisPassword}@127.0.0.1:${redisPort}`,
+    // A stable, per-install relay identity. Without it the relay falls back to
+    // a hardcoded dev keypair and serves REST with token auth bypassed.
+    BUZZ_RELAY_PRIVATE_KEY: relayPrivateKey,
+    BUZZ_REQUIRE_AUTH_TOKEN: 'true',
     BUZZ_S3_ENDPOINT: `http://127.0.0.1:${minioPort}`,
     BUZZ_S3_ACCESS_KEY: s3AccessKey,
     BUZZ_S3_SECRET_KEY: s3SecretKey,

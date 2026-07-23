@@ -146,6 +146,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
         },
         ready: {
           display: i18n('Cache'),
+          gracePeriod: 30_000,
           fn: () =>
             sdk.healthCheck.runHealthScript(
               ['redis-cli', '-a', redisPassword, 'ping'],
@@ -180,6 +181,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
               [
                 'curl',
                 '-fsS',
+                '--max-time',
+                '5',
                 `http://127.0.0.1:${minioPort}/minio/health/live`,
               ],
               minioSub,
@@ -233,7 +236,13 @@ export const main = sdk.setupMain(async ({ effects }) => {
           gracePeriod: 60_000,
           fn: () =>
             sdk.healthCheck.runHealthScript(
-              ['curl', '-fsS', `http://127.0.0.1:${healthPort}/_readiness`],
+              [
+                'curl',
+                '-fsS',
+                '--max-time',
+                '5',
+                `http://127.0.0.1:${healthPort}/_readiness`,
+              ],
               relaySub,
               {
                 errorMessage: i18n('The Buzz community endpoint is not ready'),

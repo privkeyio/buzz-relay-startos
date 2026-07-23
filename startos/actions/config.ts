@@ -1,6 +1,7 @@
 import { storeJson } from '../fileModels/store.json'
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
+import { bucketNamePattern } from '../utils'
 
 const { InputSpec, Value } = sdk
 
@@ -12,6 +13,14 @@ export const inputSpec = InputSpec.of({
     ),
     required: true,
     default: 'buzz-media',
+    patterns: [
+      {
+        regex: bucketNamePattern,
+        description: i18n(
+          'Must be 3-63 characters: lowercase letters, numbers, dots or hyphens, starting and ending with a letter or number.',
+        ),
+      },
+    ],
   }),
   autoMigrate: Value.toggle({
     name: i18n('Auto-Migrate Database'),

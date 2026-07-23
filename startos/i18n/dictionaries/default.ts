@@ -19,6 +19,7 @@ const dict = {
   Configuration: 10,
   'Configure storage and database options for Buzz Relay.': 11,
   'Changes take effect the next time Buzz Relay starts.': 12,
+  'Must be 3-63 characters: lowercase letters, numbers, dots or hyphens, starting and ending with a letter or number.': 13,
 } as const
 
 /**

@@ -15,6 +15,7 @@ export default {
     10: 'Configuración',
     11: 'Configura las opciones de almacenamiento y base de datos de Buzz Relay.',
     12: 'Los cambios surten efecto la próxima vez que se inicie Buzz Relay.',
+    13: 'Debe tener entre 3 y 63 caracteres: letras minúsculas, números, puntos o guiones, comenzando y terminando con una letra o número.',
   },
   de_DE: {
     0: 'Starte Buzz Relay!',
@@ -30,6 +31,7 @@ export default {
     10: 'Konfiguration',
     11: 'Speicher- und Datenbankoptionen für Buzz Relay konfigurieren.',
     12: 'Änderungen werden beim nächsten Start von Buzz Relay wirksam.',
+    13: 'Muss 3-63 Zeichen lang sein: Kleinbuchstaben, Zahlen, Punkte oder Bindestriche, beginnend und endend mit einem Buchstaben oder einer Zahl.',
   },
   pl_PL: {
     0: 'Uruchamianie Buzz Relay!',
@@ -45,6 +47,7 @@ export default {
     10: 'Konfiguracja',
     11: 'Skonfiguruj opcje przechowywania i bazy danych dla Buzz Relay.',
     12: 'Zmiany zaczną obowiązywać przy następnym uruchomieniu Buzz Relay.',
+    13: 'Musi mieć od 3 do 63 znaków: małe litery, cyfry, kropki lub myślniki, zaczynając i kończąc literą lub cyfrą.',
   },
   fr_FR: {
     0: 'Démarrage de Buzz Relay !',
@@ -60,5 +63,6 @@ export default {
     10: 'Configuration',
     11: 'Configurer les options de stockage et de base de données de Buzz Relay.',
     12: 'Les modifications prennent effet au prochain démarrage de Buzz Relay.',
+    13: 'Doit comporter de 3 à 63 caractères : lettres minuscules, chiffres, points ou tirets, commençant et se terminant par une lettre ou un chiffre.',
   },
 } satisfies Record<string, LangDict>

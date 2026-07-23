@@ -153,7 +153,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
               { errorMessage: i18n('Redis is not responding') },
             ),
         },
-        requires: ['postgres'],
+        requires: [],
       })
       .addDaemon('minio', {
         subcontainer: minioSub,
@@ -186,7 +186,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
               { errorMessage: i18n('MinIO is not responding') },
             ),
         },
-        requires: ['redis'],
+        requires: [],
       })
       .addOneshot('minio-init', {
         subcontainer: minioInitSub,
@@ -219,7 +219,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
           ],
           user: 'root',
         },
-        requires: ['minio-init'],
+        requires: [],
       })
       .addDaemon('relay', {
         subcontainer: relaySub,
@@ -240,7 +240,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
               },
             ),
         },
-        requires: ['prepare-data'],
+        requires: ['postgres', 'redis', 'minio-init', 'prepare-data'],
       })
   )
 })

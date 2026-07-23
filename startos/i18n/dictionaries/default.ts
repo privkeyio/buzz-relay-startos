@@ -3,9 +3,14 @@ export const DEFAULT_LANG = 'en_US'
 const dict = {
   // main.ts
   'Starting Buzz Relay!': 0,
-  'Web Interface': 1,
-  'The web interface is ready': 2,
-  'The web interface is not ready': 3,
+  Database: 1,
+  'The database is not accepting connections': 2,
+  Cache: 3,
+  'Redis is not responding': 14,
+  'Media Storage': 15,
+  'MinIO is not responding': 16,
+  'Community Endpoint': 17,
+  'The Buzz community endpoint is not ready': 18,
 
   // interfaces.ts
   'Web UI': 4,

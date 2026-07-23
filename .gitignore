@@ -1,3 +1,11 @@
+*.s9pk
+startos/*.js
+node_modules/
+.DS_Store
+.vscode/
+docker-images
+javascript
+ncc-cache.git
 
 # Beads / Dolt files (added by bd init)
 .dolt/

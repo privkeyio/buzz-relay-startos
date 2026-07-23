@@ -15,16 +15,18 @@ the runtime stack, env vars, StartOS mapping, open decisions, and task list.
 - Stack = relay + postgres:17 + redis:7 + minio + minio-init (bucket). See
   upstream `deploy/compose/compose.yml` in `github.com/block/buzz`.
 
-## Reference packages (siblings under ~/Projects/)
+## Reference packages (siblings under ~/Projects/Repo/)
 
-- `../hello-world-startos`    — 0.3.x TS SDK scaffold
+- `../hello-world-startos`    — 0.4.x TS SDK scaffold (start-sdk 2.0.6)
 - `../synapse-startos`        — bundles Postgres (daemon ordering, config secrets)
 - `../nostr-rs-relay-startos` — Nostr wss interface + relay config
+- `../wisp-startos`, `../keep-startos`, `../readstr-startos`,
+  `../standardnotes-startos` — your existing StartOS packages (same conventions)
 
 ## Conventions
 
 - Surgical changes; follow the reference packages' structure.
-- Confirm StartOS version on the box before committing to SDK APIs (0.3.5 vs 0.3.6).
+- Box = StartOS 0.4.0-beta.9; SDK = `@start9labs/start-sdk` 2.0.6 (references already 0.4.x).
 - Don't expose MinIO console publicly; relay `:3000` is the only public interface.
 
 

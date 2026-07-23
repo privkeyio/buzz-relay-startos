@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "buzz_relay_startos",
+  "project_id": "654d975c-c247-4358-bdac-5adb7e112528"
+}

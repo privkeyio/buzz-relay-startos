@@ -7,6 +7,8 @@ const shape = z.object({
   redisPassword: z.string().nullable().catch(null).default(null),
   s3AccessKey: z.string().nullable().catch(null).default(null),
   s3SecretKey: z.string().nullable().catch(null).default(null),
+  s3RelayAccessKey: z.string().nullable().catch(null).default(null),
+  s3RelaySecretKey: z.string().nullable().catch(null).default(null),
   relayPrivateKey: z.string().nullable().catch(null).default(null),
   communityHost: z.string().nullable().catch(null).default(null),
   ownerPubkey: z.string().nullable().catch(null).default(null),

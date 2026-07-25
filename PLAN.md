@@ -68,6 +68,35 @@ cert (`.local`) and `.onion` won't be accepted by Buzz Desktop over the internet
 - Alt: front with the existing VPS Caddy (`deploy/compose/compose.caddy.yml` +
   `Caddyfile` exist upstream) — but that lives outside Start9.
 
+## Restore runbook (post backup/restore) — MANDATORY step
+
+After an uninstall→restore (or any reinstall), **re-add the clearnet domain** on
+the Buzz Relay service before external clients can reach it:
+
+1. StartOS → Buzz Relay → interface → add **Public / Domain / Let's Encrypt** →
+   your host (e.g. `buzz1.privkey.io`).
+2. This re-registers the automatic published port with `start-tunnel` and
+   restores the box-side SNI route. Verify:
+   `curl -sS https://<host>/_readiness` → `{"status":"ready"}` 200.
+
+Why this is manual (investigated 2026-07-25, issue `e3u`): the clearnet domain is
+**host-level StartOS config**, not package data. It is user-specific (the
+operator's own domain), the SDK exposes **no** interface API to declare a
+clearnet/ACME domain (`setupInterfaces`/`createInterface`/`bindPort` only bind
+ports), and the package backup is `ofVolumes` only — correctly *not* backing up
+someone's domain choice. So a restore reinstalls the package + volumes but cannot
+recreate the host domain binding; it inherently needs re-adding. Note the relay's
+*internal* community host **does** survive (stored in `store.json` →
+`RELAY_URL`/`BUZZ_MEDIA_BASE_URL`), so only the StartOS clearnet route is missing,
+not the relay's own config. StartOS also reassigns the interface port on reinstall
+(observed `51977`→`60723`), but the tunnel routes by SNI to the box ingress, so the
+port change alone is harmless once the domain is re-added.
+
+Verified on-box 2026-07-25 (issue `e38`): full backup→uninstall→restore cycle;
+the `feature/chown-sentinel` fix brought the relay up as uid 1000 on restored
+root-owned `/data`; postgres/redis/minio/git data all intact; DMs are not
+relay-stored (route to inbox relays), so an empty DM history is expected.
+
 ## Reference repos (all under ~/Projects/Repo/, siblings of this repo)
 
 - `hello-world-startos`     — canonical 0.4.x TS SDK scaffold (copy structure)

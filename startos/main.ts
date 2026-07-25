@@ -83,7 +83,20 @@ export const main = sdk.setupMain(async ({ effects }) => {
     'buzz-minio-init',
   )
 
-  const relayMounts = sdk.Mounts.of().mountVolume({
+  // The relay only needs its git repo, so mount just the `git` subpath. This
+  // keeps store.json — which holds the MinIO root creds, DB/redis passwords,
+  // and the relay private key at the main volume root — out of the relay
+  // container's mount namespace, so a relay compromise can't read it off disk.
+  const relayDataMounts = sdk.Mounts.of().mountVolume({
+    volumeId: 'main',
+    subpath: 'git',
+    mountpoint: '/data/git',
+    readonly: false,
+  })
+  // prepare-data runs as root and normalizes ownership across the whole volume
+  // (and manages the /data/.chowned sentinel), so it mounts the full main
+  // volume rather than the git subpath.
+  const relayPrepMounts = sdk.Mounts.of().mountVolume({
     volumeId: 'main',
     subpath: null,
     mountpoint: '/data',
@@ -92,13 +105,13 @@ export const main = sdk.setupMain(async ({ effects }) => {
   const relaySub = sdk.SubContainer.of(
     effects,
     { imageId: 'buzz-relay' },
-    relayMounts,
+    relayDataMounts,
     'buzz-relay-sub',
   )
   const relayPrepSub = sdk.SubContainer.of(
     effects,
     { imageId: 'buzz-relay' },
-    relayMounts,
+    relayPrepMounts,
     'buzz-relay-prep',
   )
 

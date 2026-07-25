@@ -250,7 +250,16 @@ export const main = sdk.setupMain(async ({ effects }) => {
           command: [
             '/bin/sh',
             '-ec',
-            'mkdir -p /data/git && chown -R 1000:1000 /data',
+            // Normalize ownership once: the main volume starts root-owned, but
+            // after the first boot the relay (uid 1000) owns everything it
+            // writes. A sentinel skips the O(files) recursive chown on every
+            // subsequent start, which would otherwise slow startup as /data/git
+            // grows. Remove /data/.chowned to force a re-chown (e.g. after a
+            // restore that reintroduces root-owned files).
+            'mkdir -p /data/git; ' +
+              'if [ ! -e /data/.chowned ]; then ' +
+              'chown -R 1000:1000 /data && touch /data/.chowned; ' +
+              'fi',
           ],
           user: 'root',
         },

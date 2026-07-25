@@ -17,6 +17,12 @@ const dict = {
   'The web interface of Buzz Relay': 5,
 
   // actions/config.ts
+  'Community Host': 19,
+  'The public domain your community is reached at, exactly as added in Buzz Desktop (e.g. buzz1.privkey.io). No scheme, port, or path. The relay binds its community to this host.': 20,
+  'Must be a bare lowercase domain name, e.g. buzz1.privkey.io (no https://, no port, no path).': 21,
+  'Owner Public Key': 22,
+  'Your Nostr public key — makes you the owner/admin of this community. Accepts an npub1… or a 64-character hex key.': 23,
+  'Must be an npub1… key or a 64-character hex public key.': 24,
   'Media Bucket': 6,
   'The S3/MinIO bucket name used for media storage (Blossom).': 7,
   'Auto-Migrate Database': 8,

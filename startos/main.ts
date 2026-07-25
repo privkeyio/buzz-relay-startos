@@ -120,6 +120,22 @@ export const main = sdk.setupMain(async ({ effects }) => {
     BUZZ_GIT_CONFORMANCE_PROBE: 'true',
   }
 
+  // Admin-set community identity. The relay auto-seeds its single community from
+  // RELAY_URL's host at startup, so this must match the public domain the
+  // community was added as, or every request 404s "no community configured for
+  // this host". Left unset until the admin fills in the Config action, so the
+  // service still boots (and 404s) instead of crash-looping. CORS is left
+  // permissive on purpose — setting BUZZ_CORS_ORIGINS to an allowlist rejects
+  // the desktop client's tauri://localhost origin.
+  const { communityHost, ownerPubkey } = store
+  if (communityHost) {
+    relayEnv.RELAY_URL = `wss://${communityHost}`
+    relayEnv.BUZZ_MEDIA_BASE_URL = `https://${communityHost}/media`
+  }
+  if (ownerPubkey) {
+    relayEnv.RELAY_OWNER_PUBKEY = ownerPubkey
+  }
+
   return (
     sdk.Daemons.of(effects)
       .addDaemon('postgres', {

@@ -8,6 +8,8 @@ const shape = z.object({
   s3AccessKey: z.string().nullable().catch(null).default(null),
   s3SecretKey: z.string().nullable().catch(null).default(null),
   relayPrivateKey: z.string().nullable().catch(null).default(null),
+  communityHost: z.string().nullable().catch(null).default(null),
+  ownerPubkey: z.string().nullable().catch(null).default(null),
   s3Bucket: z
     .string()
     .regex(new RegExp(bucketNamePattern))

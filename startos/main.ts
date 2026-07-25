@@ -136,6 +136,9 @@ export const main = sdk.setupMain(async ({ effects }) => {
     BUZZ_S3_BUCKET: store.s3Bucket,
     BUZZ_GIT_REPO_PATH: '/data/git',
     BUZZ_AUTO_MIGRATE: String(store.autoMigrate),
+    // Upstream production default (deploy/compose defaults this to true). Gates
+    // startup on a git object-store conformance probe (~7s); the relay's
+    // gracePeriod must stay above that so readiness doesn't fail early.
     BUZZ_GIT_CONFORMANCE_PROBE: 'true',
   }
 

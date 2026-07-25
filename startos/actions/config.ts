@@ -48,7 +48,10 @@ export const inputSpec = InputSpec.of({
   s3Bucket: Value.text({
     name: i18n('Media Bucket'),
     description: i18n(
-      'The S3/MinIO bucket name used for media storage (Blossom).',
+      'The S3/MinIO bucket name used for media storage (Blossom). Changing this after media has been uploaded points the relay at a fresh, empty bucket — every previously uploaded file stays in the old bucket and becomes unreachable, with no automatic migration.',
+    ),
+    warning: i18n(
+      'Changing the media bucket orphans all previously uploaded media. Existing files remain in the old bucket and will no longer be served. Only change this on a fresh install or if you intend to start with empty media storage.',
     ),
     required: true,
     default: 'buzz-media',

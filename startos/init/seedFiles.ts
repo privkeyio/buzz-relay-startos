@@ -15,15 +15,30 @@ export const seedFiles = sdk.setupOnInit(async (effects, kind) => {
       }),
       s3AccessKey: utils.getDefaultString({ charset: 'a-z,A-Z,0-9', len: 20 }),
       s3SecretKey: utils.getDefaultString({ charset: 'a-z,A-Z,0-9', len: 40 }),
+      s3RelayAccessKey: utils.getDefaultString({
+        charset: 'a-z,A-Z,0-9',
+        len: 20,
+      }),
+      s3RelaySecretKey: utils.getDefaultString({
+        charset: 'a-z,A-Z,0-9',
+        len: 40,
+      }),
       relayPrivateKey: utils.getDefaultString({ charset: 'a-f,0-9', len: 64 }),
     })
   } else {
-    // Backfill for installs that predate the relay identity key.
+    // Backfill for installs that predate the relay identity key and the scoped
+    // MinIO service account (which replaced handing the relay root credentials).
     const existing = await storeJson.read().once()
     await storeJson.merge(effects, {
       relayPrivateKey:
         existing?.relayPrivateKey ??
         utils.getDefaultString({ charset: 'a-f,0-9', len: 64 }),
+      s3RelayAccessKey:
+        existing?.s3RelayAccessKey ??
+        utils.getDefaultString({ charset: 'a-z,A-Z,0-9', len: 20 }),
+      s3RelaySecretKey:
+        existing?.s3RelaySecretKey ??
+        utils.getDefaultString({ charset: 'a-z,A-Z,0-9', len: 40 }),
     })
   }
 })

@@ -24,6 +24,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
     redisPassword,
     s3AccessKey,
     s3SecretKey,
+    s3RelayAccessKey,
+    s3RelaySecretKey,
     relayPrivateKey,
   } = store
   if (
@@ -31,6 +33,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
     !redisPassword ||
     !s3AccessKey ||
     !s3SecretKey ||
+    !s3RelayAccessKey ||
+    !s3RelaySecretKey ||
     !relayPrivateKey
   ) {
     throw new Error('store.json is missing generated credentials')
@@ -79,7 +83,20 @@ export const main = sdk.setupMain(async ({ effects }) => {
     'buzz-minio-init',
   )
 
-  const relayMounts = sdk.Mounts.of().mountVolume({
+  // The relay only needs its git repo, so mount just the `git` subpath. This
+  // keeps store.json — which holds the MinIO root creds, DB/redis passwords,
+  // and the relay private key at the main volume root — out of the relay
+  // container's mount namespace, so a relay compromise can't read it off disk.
+  const relayDataMounts = sdk.Mounts.of().mountVolume({
+    volumeId: 'main',
+    subpath: 'git',
+    mountpoint: '/data/git',
+    readonly: false,
+  })
+  // prepare-data runs as root and normalizes ownership across the whole volume
+  // (and manages the /data/.chowned sentinel), so it mounts the full main
+  // volume rather than the git subpath.
+  const relayPrepMounts = sdk.Mounts.of().mountVolume({
     volumeId: 'main',
     subpath: null,
     mountpoint: '/data',
@@ -88,13 +105,13 @@ export const main = sdk.setupMain(async ({ effects }) => {
   const relaySub = sdk.SubContainer.of(
     effects,
     { imageId: 'buzz-relay' },
-    relayMounts,
+    relayDataMounts,
     'buzz-relay-sub',
   )
   const relayPrepSub = sdk.SubContainer.of(
     effects,
     { imageId: 'buzz-relay' },
-    relayMounts,
+    relayPrepMounts,
     'buzz-relay-prep',
   )
 
@@ -112,8 +129,10 @@ export const main = sdk.setupMain(async ({ effects }) => {
     BUZZ_RELAY_PRIVATE_KEY: relayPrivateKey,
     BUZZ_REQUIRE_AUTH_TOKEN: 'true',
     BUZZ_S3_ENDPOINT: `http://127.0.0.1:${minioPort}`,
-    BUZZ_S3_ACCESS_KEY: s3AccessKey,
-    BUZZ_S3_SECRET_KEY: s3SecretKey,
+    // Scoped MinIO service account (provisioned by minio-init), not the root
+    // credentials — a relay compromise is confined to the single media bucket.
+    BUZZ_S3_ACCESS_KEY: s3RelayAccessKey,
+    BUZZ_S3_SECRET_KEY: s3RelaySecretKey,
     BUZZ_S3_BUCKET: store.s3Bucket,
     BUZZ_GIT_REPO_PATH: '/data/git',
     BUZZ_AUTO_MIGRATE: String(store.autoMigrate),
@@ -230,14 +249,41 @@ export const main = sdk.setupMain(async ({ effects }) => {
             '/bin/sh',
             '-ec',
             [
-              `mc alias set local http://127.0.0.1:${minioPort} "$BUZZ_S3_ACCESS_KEY" "$BUZZ_S3_SECRET_KEY"`,
+              // Authenticate as root only to create the bucket and mint a
+              // bucket-scoped service account; the relay itself never sees the
+              // root credentials.
+              `mc alias set local http://127.0.0.1:${minioPort} "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"`,
               'mc mb --ignore-existing "local/$BUZZ_S3_BUCKET"',
               'mc anonymous set none "local/$BUZZ_S3_BUCKET"',
+              // Inline policy confining the relay's service account to the media
+              // bucket. Re-derived every start so it tracks a bucket rename.
+              'cat > /tmp/relay-policy.json <<EOF',
+              '{',
+              '  "Version": "2012-10-17",',
+              '  "Statement": [',
+              '    {',
+              '      "Effect": "Allow",',
+              '      "Action": ["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket","s3:GetBucketLocation"],',
+              '      "Resource": ["arn:aws:s3:::$BUZZ_S3_BUCKET","arn:aws:s3:::$BUZZ_S3_BUCKET/*"]',
+              '    }',
+              '  ]',
+              '}',
+              'EOF',
+              // Create on first run, refresh the policy on later runs. minio-init
+              // is a oneshot that re-executes on every start, so this must be
+              // idempotent.
+              'if mc admin user svcacct info local "$BUZZ_S3_RELAY_ACCESS_KEY" >/dev/null 2>&1; then',
+              '  mc admin user svcacct edit local "$BUZZ_S3_RELAY_ACCESS_KEY" --policy /tmp/relay-policy.json',
+              'else',
+              '  mc admin user svcacct add local "$MINIO_ROOT_USER" --access-key "$BUZZ_S3_RELAY_ACCESS_KEY" --secret-key "$BUZZ_S3_RELAY_SECRET_KEY" --policy /tmp/relay-policy.json',
+              'fi',
             ].join('\n'),
           ],
           env: {
-            BUZZ_S3_ACCESS_KEY: s3AccessKey,
-            BUZZ_S3_SECRET_KEY: s3SecretKey,
+            MINIO_ROOT_USER: s3AccessKey,
+            MINIO_ROOT_PASSWORD: s3SecretKey,
+            BUZZ_S3_RELAY_ACCESS_KEY: s3RelayAccessKey,
+            BUZZ_S3_RELAY_SECRET_KEY: s3RelaySecretKey,
             BUZZ_S3_BUCKET: store.s3Bucket,
           },
         },

@@ -188,22 +188,30 @@ export const main = sdk.setupMain(async ({ effects }) => {
       .addDaemon('redis', {
         subcontainer: redisSub,
         exec: {
+          // Write requirepass to a config file (from an env var, not argv) so the
+          // password never appears in the container's process list.
           command: [
-            'redis-server',
-            '--appendonly',
-            'yes',
-            '--dir',
-            '/data',
-            '--requirepass',
-            redisPassword,
+            '/bin/sh',
+            '-ec',
+            'printf "appendonly yes\\ndir /data\\nrequirepass %s\\n" ' +
+              '"$REDIS_PASSWORD" > /tmp/redis.conf\n' +
+              'exec redis-server /tmp/redis.conf',
           ],
+          env: { REDIS_PASSWORD: redisPassword },
         },
         ready: {
           display: i18n('Cache'),
           gracePeriod: 30_000,
           fn: () =>
             sdk.healthCheck.runHealthScript(
-              ['redis-cli', '-a', redisPassword, 'ping'],
+              // REDISCLI_AUTH from the config file the daemon wrote, so the poll
+              // keeps the password off argv and skips redis-cli's -a warning.
+              [
+                '/bin/sh',
+                '-c',
+                'REDISCLI_AUTH="$(sed -n "s/^requirepass //p" /tmp/redis.conf)" ' +
+                  'redis-cli ping',
+              ],
               redisSub,
               { errorMessage: i18n('Redis is not responding') },
             ),

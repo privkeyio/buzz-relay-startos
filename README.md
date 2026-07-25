@@ -6,9 +6,12 @@
 
 > **Upstream repo:** <https://github.com/block/buzz>
 >
-> Everything not listed in this document should behave the same as upstream
-> buzz-relay. If a feature, setting, or behavior is not mentioned here, the
-> upstream documentation is accurate and fully applicable.
+> This document covers the StartOS package. For **application** behavior the
+> package does not alter — the relay's HTTP/WS API, media handling, and database
+> semantics — upstream buzz-relay documentation applies. Packaging concerns that
+> StartOS necessarily manages — networking and TLS, service lifecycle and health,
+> bundled storage, and configuration — are governed by this document, not
+> upstream.
 
 Block's **buzz-relay** packaged for StartOS: the Axum WS + REST backend that
 powers a self-hosted **Buzz Community**. A Buzz Community is not a bare Nostr
@@ -198,10 +201,24 @@ None — PostgreSQL, Redis, and MinIO are bundled inside the package.
 
 - The relay binary and behavior are Block's `ghcr.io/block/buzz:main`, used as
   published (no fork, no rebuild).
-- The service stack (relay + PostgreSQL 17 + Redis 7 + MinIO) and the env-var
-  contract mirror Block's `deploy/compose`.
+- The service stack (relay + PostgreSQL 17 + Redis 7 + MinIO) follows Block's
+  `deploy/compose`.
 - Community HTTP/WS endpoints, media (Blossom) storage, and database migrations
   behave as upstream documents.
+
+Intentional StartOS adaptations to the env-var contract (it is not a verbatim
+copy of `deploy/compose`):
+
+- Service hostnames collapse to `127.0.0.1` (`DATABASE_URL`, `REDIS_URL`,
+  `BUZZ_S3_ENDPOINT`) because all containers share one network namespace.
+- `BUZZ_AUTO_MIGRATE` defaults **on** here (compose default is `false`) so a
+  fresh install starts clean; it is exposed as a config toggle.
+- `BUZZ_REQUIRE_AUTH_TOKEN=true` and a generated per-install
+  `BUZZ_RELAY_PRIVATE_KEY` are always set, so REST auth is never bypassed.
+- The relay is handed a bucket-scoped MinIO service account, not the root
+  credentials.
+- `RELAY_URL`/`BUZZ_MEDIA_BASE_URL` derive from the configured Community Host;
+  `BUZZ_GIT_CONFORMANCE_PROBE=true` matches upstream's production default.
 
 ---
 
@@ -211,7 +228,13 @@ None — PostgreSQL, Redis, and MinIO are bundled inside the package.
 package_id: buzz-relay
 title: Buzz Relay
 upstream: https://github.com/block/buzz
-image: ghcr.io/block/buzz:main (prebuilt, no rebuild)
+image: ghcr.io/block/buzz:main   # relay only, prebuilt (no rebuild)
+runtime_stack:                   # full stack; see "Image and Container Runtime"
+  - ghcr.io/block/buzz:main                       # relay (Axum WS + REST)
+  - postgres:17-alpine                            # event store + FTS
+  - redis:7-alpine                                # pub/sub + presence
+  - minio/minio:RELEASE.2025-09-07T16-13-09Z      # S3 media (Blossom)
+  - minio/mc:RELEASE.2025-08-13T08-35-41Z         # one-shot bucket + svc-account init
 architectures:
   - x86_64
   - aarch64

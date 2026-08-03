@@ -16,14 +16,18 @@ of them → Buzz shows **"Community rejected: Load failed."** Only Block's
 - Upstream repo: `github.com/block/buzz` (Apache-2.0 monorepo).
   - Relay crate: `crates/buzz-relay` (Axum WS + REST). No standalone repo.
   - Reference deploy: `deploy/compose/compose.yml` (+ `.env.example`, `Caddyfile`, `compose.caddy.yml`).
-- Prebuilt image: **`ghcr.io/block/buzz:main`** — multi-arch **amd64 + arm64**.
+- Prebuilt image: **`ghcr.io/block/buzz`** — multi-arch **amd64 + arm64**.
   Target box is **amd64** → NO source build needed; wrap the image.
+  Pinned **by digest** (`sha256:fd837f78…` = upstream `e341b09`, relay 0.2.0),
+  not by `:main`. `:main` is mutable, so builds off it are not reproducible; a
+  single OCI index digest covers both arches. Upstream states the relay
+  "ships as a pinnable artifact" and versions independently of the monorepo.
 
 ## Runtime stack (from deploy/compose/compose.yml)
 
 | Service    | Image                    | Role                         | Ports                         |
 |------------|--------------------------|------------------------------|-------------------------------|
-| relay      | ghcr.io/block/buzz:main  | Axum WS + REST (community)   | 3000 app · 8080 health · 9102 metrics |
+| relay      | ghcr.io/block/buzz@sha256:fd837f78 | Axum WS + REST (community) | 3000 app · 8080 health · 9102 metrics |
 | postgres   | postgres:17-alpine       | event store + FTS            | 5432                          |
 | redis      | redis:7-alpine (requirepass) | pub/sub + presence       | 6379                          |
 | minio      | minio/minio              | S3 media (Blossom)           | 9000 · 9001 console           |

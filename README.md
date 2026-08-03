@@ -16,9 +16,10 @@
 Block's **buzz-relay** packaged for StartOS: the Axum WS + REST backend that
 powers a self-hosted **Buzz Community**. A Buzz Community is not a bare Nostr
 relay — Buzz Desktop probes community HTTP endpoints before connecting, and only
-`buzz-relay` serves them. This package wraps the prebuilt `ghcr.io/block/buzz:main`
-image together with its PostgreSQL, Redis, and MinIO runtime dependencies, all
-bundled inside the package.
+`buzz-relay` serves them. This package wraps the prebuilt `ghcr.io/block/buzz`
+image — pinned by digest, not by the mutable `:main` tag — together with its
+PostgreSQL, Redis, and MinIO runtime dependencies, all bundled inside the
+package.
 
 ---
 
@@ -48,7 +49,7 @@ multi-arch image is used as published.
 
 | Image                                      | Role                            | Architectures    |
 | ------------------------------------------ | ------------------------------- | ---------------- |
-| `ghcr.io/block/buzz:main`                  | Axum WS + REST (community)       | x86_64, aarch64  |
+| `ghcr.io/block/buzz` @ `sha256:fd837f78`   | Axum WS + REST (community)       | x86_64, aarch64  |
 | `postgres:17-alpine`                       | Event store + full-text search   | x86_64, aarch64  |
 | `redis:7-alpine`                           | Pub/sub + presence               | x86_64, aarch64  |
 | `minio/minio:RELEASE.2025-09-07T16-13-09Z` | S3 media storage (Blossom)       | x86_64, aarch64  |
@@ -199,8 +200,10 @@ None — PostgreSQL, Redis, and MinIO are bundled inside the package.
 
 ## What Is Unchanged from Upstream
 
-- The relay binary and behavior are Block's `ghcr.io/block/buzz:main`, used as
-  published (no fork, no rebuild).
+- The relay binary and behavior are Block's `ghcr.io/block/buzz`, used as
+  published (no fork, no rebuild). The image is pinned by digest to upstream
+  commit `e341b09` (relay crate version 0.2.0), so a rebuild of this repo always
+  produces the same relay.
 - The service stack (relay + PostgreSQL 17 + Redis 7 + MinIO) follows Block's
   `deploy/compose`.
 - Community HTTP/WS endpoints, media (Blossom) storage, and database migrations
@@ -228,9 +231,10 @@ copy of `deploy/compose`):
 package_id: buzz-relay
 title: Buzz Relay
 upstream: https://github.com/block/buzz
-image: ghcr.io/block/buzz:main   # relay only, prebuilt (no rebuild)
+image: ghcr.io/block/buzz@sha256:fd837f78ec4f8e0a72b1a165db40cd20946eb4773d337e8eff1573f5d3f41b7d
+upstream_commit: e341b09    # relay crate 0.2.0; pinned by digest, not :main
 runtime_stack:                   # full stack; see "Image and Container Runtime"
-  - ghcr.io/block/buzz:main                       # relay (Axum WS + REST)
+  - ghcr.io/block/buzz@sha256:fd837f78            # relay (Axum WS + REST)
   - postgres:17-alpine                            # event store + FTS
   - redis:7-alpine                                # pub/sub + presence
   - minio/minio:RELEASE.2025-09-07T16-13-09Z      # S3 media (Blossom)

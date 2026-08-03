@@ -10,8 +10,10 @@ the runtime stack, env vars, StartOS mapping, open decisions, and task list.
 
 - Buzz Community ≠ bare Nostr relay. Needs Block's `buzz-relay` (Axum WS+REST),
   which serves community HTTP endpoints Buzz Desktop probes on add.
-- Image: `ghcr.io/block/buzz:main` (multi-arch amd64+arm64). Target box = amd64,
-  so NO Rust build — wrap the prebuilt image.
+- Image: prebuilt `ghcr.io/block/buzz`, pinned **by digest** (multi-arch
+  amd64+arm64; one index digest covers both). Target box = amd64, so NO Rust
+  build — wrap the prebuilt image. Never pin `:main`: it is mutable, so the
+  same commit here would build different relays on different days.
 - Stack = relay + postgres:17 + redis:7 + minio + minio-init (bucket). See
   upstream `deploy/compose/compose.yml` in `github.com/block/buzz`.
 

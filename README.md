@@ -49,7 +49,7 @@ multi-arch image is used as published.
 
 | Image                                      | Role                            | Architectures    |
 | ------------------------------------------ | ------------------------------- | ---------------- |
-| `ghcr.io/block/buzz` @ `sha256:fd837f78`   | Axum WS + REST (community)       | x86_64, aarch64  |
+| `ghcr.io/block/buzz` @ `sha256:fd837f78…` | Axum WS + REST (community)       | x86_64, aarch64  |
 | `postgres:17-alpine`                       | Event store + full-text search   | x86_64, aarch64  |
 | `redis:7-alpine`                           | Pub/sub + presence               | x86_64, aarch64  |
 | `minio/minio:RELEASE.2025-09-07T16-13-09Z` | S3 media storage (Blossom)       | x86_64, aarch64  |

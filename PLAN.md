@@ -27,7 +27,7 @@ of them → Buzz shows **"Community rejected: Load failed."** Only Block's
 
 | Service    | Image                    | Role                         | Ports                         |
 |------------|--------------------------|------------------------------|-------------------------------|
-| relay      | ghcr.io/block/buzz@sha256:fd837f78 | Axum WS + REST (community) | 3000 app · 8080 health · 9102 metrics |
+| relay      | ghcr.io/block/buzz@sha256:fd837f78… | Axum WS + REST (community) | 3000 app · 8080 health · 9102 metrics |
 | postgres   | postgres:17-alpine       | event store + FTS            | 5432                          |
 | redis      | redis:7-alpine (requirepass) | pub/sub + presence       | 6379                          |
 | minio      | minio/minio              | S3 media (Blossom)           | 9000 · 9001 console           |

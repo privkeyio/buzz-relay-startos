@@ -13,7 +13,13 @@ export const manifest = setupManifest({
   volumes: ['main', 'postgres', 'redis', 'minio'],
   images: {
     'buzz-relay': {
-      source: { dockerTag: 'ghcr.io/block/buzz:main' },
+      // Pinned by digest, not `:main` — that tag is mutable, so two builds of
+      // the same commit here could ship different relays. Bump deliberately.
+      // upstream block/buzz @ e341b09 (sha-e341b09, 2026-07-23), relay 0.2.0
+      source: {
+        dockerTag:
+          'ghcr.io/block/buzz@sha256:fd837f78ec4f8e0a72b1a165db40cd20946eb4773d337e8eff1573f5d3f41b7d',
+      },
       arch: ['x86_64', 'aarch64'],
     },
     postgres: {

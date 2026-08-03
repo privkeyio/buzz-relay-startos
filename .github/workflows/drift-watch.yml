@@ -70,6 +70,11 @@ jobs:
           man_digest=$(echo "$index" | jq -r \
             '.manifests[] | select(.platform.os=="linux" and .platform.architecture=="amd64") | .digest' \
             | head -1)
+          if [ -z "$man_digest" ]; then
+            echo "::warning::No linux/amd64 manifest in the :main index" >&2
+            echo "No linux/amd64 entry in the :main index; cannot read revision label" >&2
+            exit 1
+          fi
           manifest=$(curl -fsSL -H "$auth" -H "$man_accept" \
             "https://ghcr.io/v2/${repo}/manifests/${man_digest}")
           config_digest=$(echo "$manifest" | jq -r '.config.digest')
@@ -108,6 +113,10 @@ jobs:
           status=$(gh api "repos/${IMAGE_REPO}/compare/${pinned_commit}...${new_commit}" \
             --jq '.status')
           echo "compare status: $status"
+          if [ -z "$status" ]; then
+            echo "::warning::Empty compare status for ${pinned_commit}...${new_commit} (transient GH error?); failing so the stall is visible" >&2
+            exit 1
+          fi
           if [ "$status" != "ahead" ]; then
             echo "Not strictly newer (status=$status); refusing to propose."
             echo "proceed=false" >>"$GITHUB_OUTPUT"

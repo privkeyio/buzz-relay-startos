@@ -234,7 +234,7 @@ upstream: https://github.com/block/buzz
 image: ghcr.io/block/buzz@sha256:fd837f78ec4f8e0a72b1a165db40cd20946eb4773d337e8eff1573f5d3f41b7d
 upstream_commit: e341b09    # relay crate 0.2.0; pinned by digest, not :main
 runtime_stack:                   # full stack; see "Image and Container Runtime"
-  - ghcr.io/block/buzz@sha256:fd837f78            # relay (Axum WS + REST)
+  - ghcr.io/block/buzz@sha256:fd837f78ec4f8e0a72b1a165db40cd20946eb4773d337e8eff1573f5d3f41b7d            # relay (Axum WS + REST)
   - postgres:17-alpine                            # event store + FTS
   - redis:7-alpine                                # pub/sub + presence
   - minio/minio:RELEASE.2025-09-07T16-13-09Z      # S3 media (Blossom)

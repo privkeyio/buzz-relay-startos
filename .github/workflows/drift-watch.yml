@@ -1,0 +1,186 @@
+name: Upstream drift watch
+
+# Watches the mutable ghcr.io/block/buzz:main tag and opens a PR when its OCI
+# index digest moves ahead of the digest pinned in startos/manifest/index.ts.
+# Never auto-merges: tagAndRelease.yml publishes on every push to master, so a
+# merged digest bump also needs a deliberate version bump in
+# startos/versions/current.ts (and possibly migrations). A human owns that.
+
+on:
+  schedule:
+    - cron: '0 12 * * 1' # Mondays 12:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_REPO: block/buzz
+      MANIFEST: startos/manifest/index.ts
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the pinned digest and commit
+        id: pinned
+        run: |
+          set -euo pipefail
+          digest=$(grep -oE 'ghcr\.io/block/buzz@sha256:[0-9a-f]{64}' "$MANIFEST" \
+            | head -1 | sed 's#.*@##')
+          commit=$(grep -oE 'upstream block/buzz @ [0-9a-f]{7,40}' "$MANIFEST" \
+            | head -1 | awk '{print $NF}')
+          if [ -z "$digest" ] || [ -z "$commit" ]; then
+            echo "Could not parse pinned digest/commit from $MANIFEST" >&2
+            exit 1
+          fi
+          echo "digest=$digest" >>"$GITHUB_OUTPUT"
+          echo "commit=$commit" >>"$GITHUB_OUTPUT"
+          echo "Pinned: $commit @ $digest"
+
+      - name: Resolve upstream :main digest and revision
+        id: upstream
+        run: |
+          set -euo pipefail
+          repo="$IMAGE_REPO"
+          token=$(curl -fsSL "https://ghcr.io/token?scope=repository:${repo}:pull" | jq -r .token)
+          auth="Authorization: Bearer ${token}"
+          idx_accept='Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json'
+          man_accept='Accept: application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json'
+
+          # Index digest for the mutable :main tag.
+          new_digest=$(curl -fsSL -I -H "$auth" -H "$idx_accept" \
+            "https://ghcr.io/v2/${repo}/manifests/main" \
+            | tr -d '\r' | awk -F': ' 'tolower($1)=="docker-content-digest"{print $2}')
+          if [ -z "$new_digest" ]; then
+            echo "Empty docker-content-digest for :main" >&2
+            exit 1
+          fi
+
+          # Descend one arch to read org.opencontainers.image.revision.
+          index=$(curl -fsSL -H "$auth" -H "$idx_accept" \
+            "https://ghcr.io/v2/${repo}/manifests/main")
+          man_digest=$(echo "$index" | jq -r \
+            '.manifests[] | select(.platform.os=="linux" and .platform.architecture=="amd64") | .digest' \
+            | head -1)
+          manifest=$(curl -fsSL -H "$auth" -H "$man_accept" \
+            "https://ghcr.io/v2/${repo}/manifests/${man_digest}")
+          config_digest=$(echo "$manifest" | jq -r '.config.digest')
+          config=$(curl -fsSL -H "$auth" \
+            "https://ghcr.io/v2/${repo}/blobs/${config_digest}")
+          revision=$(echo "$config" | jq -r '.config.Labels["org.opencontainers.image.revision"] // .Labels["org.opencontainers.image.revision"] // ""')
+          version=$(echo "$config" | jq -r '.config.Labels["org.opencontainers.image.version"] // .Labels["org.opencontainers.image.version"] // ""')
+
+          if [ -z "$revision" ]; then
+            echo "No org.opencontainers.image.revision label on :main image" >&2
+            exit 1
+          fi
+          echo "digest=$new_digest" >>"$GITHUB_OUTPUT"
+          echo "revision=$revision" >>"$GITHUB_OUTPUT"
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+          echo "Upstream :main -> $revision @ $new_digest (version=${version:-n/a})"
+
+      - name: Decide whether upstream moved strictly ahead
+        id: decide
+        run: |
+          set -euo pipefail
+          pinned_digest='${{ steps.pinned.outputs.digest }}'
+          pinned_commit='${{ steps.pinned.outputs.commit }}'
+          new_digest='${{ steps.upstream.outputs.digest }}'
+          new_commit='${{ steps.upstream.outputs.revision }}'
+
+          if [ "$pinned_digest" = "$new_digest" ]; then
+            echo "No drift: digest unchanged."
+            echo "proceed=false" >>"$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Ancestry gate: only proceed if the pinned commit is an ancestor of
+          # the new commit (status "ahead"). This blocks equal-or-older pins so
+          # the workflow can never downgrade.
+          status=$(gh api "repos/${IMAGE_REPO}/compare/${pinned_commit}...${new_commit}" \
+            --jq '.status')
+          echo "compare status: $status"
+          if [ "$status" != "ahead" ]; then
+            echo "Not strictly newer (status=$status); refusing to propose."
+            echo "proceed=false" >>"$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "proceed=true" >>"$GITHUB_OUTPUT"
+
+      - name: Open drift PR
+        if: steps.decide.outputs.proceed == 'true'
+        run: |
+          set -euo pipefail
+          pinned_digest='${{ steps.pinned.outputs.digest }}'
+          pinned_commit='${{ steps.pinned.outputs.commit }}'
+          new_digest='${{ steps.upstream.outputs.digest }}'
+          new_commit='${{ steps.upstream.outputs.revision }}'
+          new_version='${{ steps.upstream.outputs.version }}'
+          short=${new_commit:0:7}
+          branch="drift/buzz-${short}"
+
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "Branch $branch already exists; assuming PR is already open."
+            exit 0
+          fi
+
+          today=$(date -u +%Y-%m-%d)
+          version_note=${new_version:+, relay ${new_version}}
+
+          # Swap the digest and refresh the provenance comment.
+          sed -i "s#block/buzz@${pinned_digest}#block/buzz@${new_digest}#" "$MANIFEST"
+          sed -i "s#// upstream block/buzz @ ${pinned_commit} .*#// upstream block/buzz @ ${short} (sha-${short}, ${today})${version_note}#" "$MANIFEST"
+
+          if git diff --quiet -- "$MANIFEST"; then
+            echo "sed produced no change to $MANIFEST; aborting to avoid an empty PR." >&2
+            exit 1
+          fi
+
+          compare="https://github.com/${IMAGE_REPO}/compare/${pinned_commit}...${new_commit}"
+
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git switch -c "$branch"
+          git add "$MANIFEST"
+          git commit -S -m "Bump pinned buzz-relay digest to sha-${short}" || \
+            git commit -m "Bump pinned buzz-relay digest to sha-${short}"
+          git push origin "$branch"
+
+          body=$(cat <<EOF
+          Upstream \`ghcr.io/block/buzz:main\` moved ahead of the pinned digest.
+
+          | | commit | index digest |
+          |---|---|---|
+          | old | \`${pinned_commit}\` | \`${pinned_digest}\` |
+          | new | \`${short}\` | \`${new_digest}\` |
+
+          Upstream changes: ${pinned_commit}...${short}
+          Compare: ${compare}
+          ${new_version:+Relay crate version: \`${new_version}\`}
+
+          ## Before merging (required)
+
+          - [ ] Bump \`startos/versions/current.ts\` — \`tagAndRelease.yml\` publishes on
+                every push to \`master\`, so merging this auto-releases. The next drift
+                release ships as \`0.2.0:1\`.
+          - [ ] Review the \`BUZZ_*\` env-var contract in \`startos/main.ts\` and add a
+                migration if the bump changed it.
+          - [ ] On a live community, take a StartOS backup first.
+
+          Opened by the drift-watch workflow. Do not auto-merge.
+          EOF
+          )
+
+          gh pr create \
+            --base master \
+            --head "$branch" \
+            --title "Bump pinned buzz-relay digest to sha-${short}" \
+            --body "$body"

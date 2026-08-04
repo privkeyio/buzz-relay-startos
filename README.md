@@ -102,8 +102,9 @@ Available at any service status. Fields:
 
 - **Community Host** (required) — the public domain your community is reached at,
   exactly as added in Buzz Desktop (e.g. `buzz1.privkey.io`). No scheme, port, or
-  path. The relay auto-seeds its single community from this host; it must match
-  the domain the community was added as, or every request 404s.
+  path. The relay auto-seeds its single community from this host on first start
+  and binds to it permanently, so it must match the domain the community was
+  added as; a mismatch makes every request 404. Set this before the first start.
 - **Owner Public Key** (required) — your Nostr pubkey; makes you the
   owner/admin. Accepts an `npub1…` or a 64-character hex key (npub is decoded to
   hex before storage).
@@ -138,8 +139,10 @@ hostname — a `.local` or `.onion` address will not work.
 3. Start the service and add the community in Buzz Desktop by its `wss://`
    address (e.g. `wss://buzz1.privkey.io`).
 
-Until the Community Host is set, the service still boots but every request 404s
-(no community configured) rather than crash-looping.
+Until the Community Host is set, the service refuses to start and surfaces an
+actionable error. Set it to your final domain **before** the first start — the
+relay permanently binds its community to this host on first boot, and there is no
+way to rename or re-point it afterward.
 
 ---
 

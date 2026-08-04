@@ -109,8 +109,21 @@ export const config = sdk.Action.withInput(
         'Owner Public Key must be a valid npub1… or 64-character hex key.',
       )
     }
+    const communityHost = input.communityHost.trim().toLowerCase()
+    // Community Host is free to edit before first start, but once the relay has
+    // bound its community (boundHost set) it is permanent upstream — reject any
+    // change so RELAY_URL keeps deriving from the original host and existing
+    // data is never stranded.
+    const data = await storeJson.read().once()
+    if (data?.boundHost && communityHost !== data.boundHost) {
+      throw new Error(
+        `Community Host is locked to "${data.boundHost}" — it was bound when ` +
+          'Buzz Relay first started and cannot be changed. To move to a ' +
+          'different domain you must reset the community, which erases all data.',
+      )
+    }
     return storeJson.merge(effects, {
-      communityHost: input.communityHost.trim().toLowerCase(),
+      communityHost,
       ownerPubkey,
       s3Bucket: input.s3Bucket,
       autoMigrate: input.autoMigrate,

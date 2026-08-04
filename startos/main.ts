@@ -161,8 +161,18 @@ export const main = sdk.setupMain(async ({ effects }) => {
         'and it cannot be changed afterward.',
     )
   }
-  relayEnv.RELAY_URL = `wss://${communityHost}`
-  relayEnv.BUZZ_MEDIA_BASE_URL = `https://${communityHost}/media`
+  // Bind the community host on first start and lock to it thereafter. The relay
+  // seeds its community from RELAY_URL's host and upstream has no rename path,
+  // so persist that host once (boundHost) and always derive from it — even if
+  // communityHost were somehow changed later, RELAY_URL keeps pointing at the
+  // original community. The Config action rejects host edits once boundHost is
+  // set, so the two can only diverge transiently.
+  const boundHost = store.boundHost ?? communityHost
+  if (!store.boundHost) {
+    await storeJson.merge(effects, { boundHost })
+  }
+  relayEnv.RELAY_URL = `wss://${boundHost}`
+  relayEnv.BUZZ_MEDIA_BASE_URL = `https://${boundHost}/media`
   if (ownerPubkey) {
     relayEnv.RELAY_OWNER_PUBKEY = ownerPubkey
   }

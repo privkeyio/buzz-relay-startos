@@ -66,21 +66,31 @@ export const reset = sdk.Action.withInput(
       )
     }
 
-    // Clear the Postgres volume so the entrypoint runs a fresh initdb and the
-    // relay re-seeds its community on next start. The action is only-stopped, so
-    // no daemon holds the volume while we remove its contents. Removing the
-    // volume's children (rather than the mountpoint itself) keeps the mount
-    // intact. ENOENT means the volume was never populated — treat as empty.
-    const pgRoot = sdk.volumes.postgres.subpath('')
-    try {
-      const entries = await readdir(pgRoot)
-      await Promise.all(
-        entries.map((entry) =>
-          rm(join(pgRoot, entry), { recursive: true, force: true }),
-        ),
-      )
-    } catch (e: any) {
-      if (e?.code !== 'ENOENT') throw e
+    // Wipe every data store the community lives in so reset is a true clean
+    // slate: Postgres (channels, members, posts, NIP-05), MinIO (uploaded
+    // media — otherwise old blobs stay publicly served at /media), and Redis
+    // (cache). The `main` volume is left alone: it holds store.json with the
+    // generated credentials and host config the operator keeps. The action is
+    // only-stopped, so no daemon holds a volume while we clear it. We remove
+    // each volume's children (not the mountpoint) to keep the mount intact;
+    // Postgres then runs a fresh initdb and the relay re-seeds on next start.
+    for (const volume of [
+      sdk.volumes.postgres,
+      sdk.volumes.minio,
+      sdk.volumes.redis,
+    ]) {
+      const root = volume.subpath('')
+      try {
+        const entries = await readdir(root)
+        // Remove sequentially: on failure this leaves the fewest half-deleted
+        // stores, and there is no throughput benefit to parallelism here.
+        for (const entry of entries) {
+          await rm(join(root, entry), { recursive: true, force: true })
+        }
+      } catch (e: any) {
+        // ENOENT means the volume was never populated — treat as empty.
+        if (e?.code !== 'ENOENT') throw e
+      }
     }
 
     // Release the host lock. main.ts rebinds boundHost from communityHost on the

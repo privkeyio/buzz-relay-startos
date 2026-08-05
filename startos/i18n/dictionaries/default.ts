@@ -41,6 +41,15 @@ const dict = {
   'Add This Community in Buzz Desktop': 30,
   'Public Domains on Interface': 31,
   'Connection Readiness': 32,
+
+  // actions/reset.ts
+  'Reset Community': 33,
+  'Erase this community and start over — recover after binding the wrong domain, or reset a corrupted database.': 34,
+  'This permanently deletes the entire community: every channel, member, post, and NIP-05 identity. It wipes the database and releases the host lock so you can set a new domain. This cannot be undone. Stop Buzz Relay before running it, then reconfigure and start to seed a fresh community.': 35,
+  'Confirm Community Host': 36,
+  'Type your community host exactly as configured to confirm. This is the last safeguard against an accidental reset — the value you type must match the host this community is bound to.': 37,
+  'Community Reset': 38,
+  'The community database was erased and the host lock released. Open the Configuration action to set your new Community Host (or keep the current one), then start Buzz Relay to seed a fresh community.': 39,
 } as const
 
 /**

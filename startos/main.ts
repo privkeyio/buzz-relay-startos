@@ -142,18 +142,37 @@ export const main = sdk.setupMain(async ({ effects }) => {
     BUZZ_GIT_CONFORMANCE_PROBE: 'true',
   }
 
-  // Admin-set community identity. The relay auto-seeds its single community from
-  // RELAY_URL's host at startup, so this must match the public domain the
-  // community was added as, or every request 404s "no community configured for
-  // this host". Left unset until the admin fills in the Config action, so the
-  // service still boots (and 404s) instead of crash-looping. CORS is left
+  // Admin-set community identity. The relay permanently binds its single
+  // community to RELAY_URL's host the first time the relay starts, and upstream
+  // has no rename/re-point path — so the host must be the final public clearnet
+  // domain BEFORE the relay ever boots. Refuse to start until it is set: if the
+  // relay booted with RELAY_URL unset it would default to ws://localhost:3000
+  // and seed a dead community under `localhost:3000` that can never be reached
+  // from Buzz Desktop. The Configuration action has allowedStatuses 'any', so
+  // it stays reachable while the service is stopped on this guard. CORS is left
   // permissive on purpose — setting BUZZ_CORS_ORIGINS to an allowlist rejects
   // the desktop client's tauri://localhost origin.
   const { communityHost, ownerPubkey } = store
-  if (communityHost) {
-    relayEnv.RELAY_URL = `wss://${communityHost}`
-    relayEnv.BUZZ_MEDIA_BASE_URL = `https://${communityHost}/media`
+  if (!communityHost) {
+    throw new Error(
+      'Buzz Relay is not configured. Open the "Configuration" action, set ' +
+        'Community Host to your public clearnet domain (and Owner Public Key), ' +
+        'then start. The relay binds its community to this host on first start ' +
+        'and it cannot be changed afterward.',
+    )
   }
+  // Bind the community host on first start and lock to it thereafter. The relay
+  // seeds its community from RELAY_URL's host and upstream has no rename path,
+  // so persist that host once (boundHost) and always derive from it — even if
+  // communityHost were somehow changed later, RELAY_URL keeps pointing at the
+  // original community. The Config action rejects host edits once boundHost is
+  // set, so the two can only diverge transiently.
+  const boundHost = store.boundHost ?? communityHost
+  if (!store.boundHost) {
+    await storeJson.merge(effects, { boundHost })
+  }
+  relayEnv.RELAY_URL = `wss://${boundHost}`
+  relayEnv.BUZZ_MEDIA_BASE_URL = `https://${boundHost}/media`
   if (ownerPubkey) {
     relayEnv.RELAY_OWNER_PUBKEY = ownerPubkey
   }

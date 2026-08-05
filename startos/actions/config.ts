@@ -14,7 +14,10 @@ export const inputSpec = InputSpec.of({
   communityHost: Value.text({
     name: i18n('Community Host'),
     description: i18n(
-      'The public domain your community is reached at, exactly as added in Buzz Desktop (e.g. buzz1.privkey.io). No scheme, port, or path. The relay binds its community to this host.',
+      'The public clearnet domain your community is reached at, exactly as added in Buzz Desktop (e.g. buzz1.privkey.io). No scheme, port, or path. REQUIREMENTS: (1) a real public domain — Buzz Desktop only trusts standard public certificate authorities, so a LAN .local or Tor .onion address will NOT work; (2) add this domain to Buzz Relay in StartOS with Let’s Encrypt as the ACME provider; (3) port 443 must be publicly reachable on the IP the domain points to. The relay binds its community to this host on first start.',
+    ),
+    warning: i18n(
+      'Set this to your final domain BEFORE starting Buzz Relay for the first time. The relay permanently binds its community to this host on first start, and there is no way to rename or re-point it afterward — changing it strands your existing community, channels, members, and every user’s NIP-05 identity. To move to a different domain you must reset the community (wipe all data) and start over.',
     ),
     required: true,
     default: null,
@@ -106,8 +109,21 @@ export const config = sdk.Action.withInput(
         'Owner Public Key must be a valid npub1… or 64-character hex key.',
       )
     }
+    const communityHost = input.communityHost.trim().toLowerCase()
+    // Community Host is free to edit before first start, but once the relay has
+    // bound its community (boundHost set) it is permanent upstream — reject any
+    // change so RELAY_URL keeps deriving from the original host and existing
+    // data is never stranded.
+    const data = await storeJson.read().once()
+    if (data?.boundHost && communityHost !== data.boundHost) {
+      throw new Error(
+        `Community Host is locked to "${data.boundHost}" — it was bound when ` +
+          'Buzz Relay first started and cannot be changed. To move to a ' +
+          'different domain you must reset the community, which erases all data.',
+      )
+    }
     return storeJson.merge(effects, {
-      communityHost: input.communityHost.trim().toLowerCase(),
+      communityHost,
       ownerPubkey,
       s3Bucket: input.s3Bucket,
       autoMigrate: input.autoMigrate,

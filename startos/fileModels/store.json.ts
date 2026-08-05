@@ -11,6 +11,10 @@ const shape = z.object({
   s3RelaySecretKey: z.string().nullable().catch(null).default(null),
   relayPrivateKey: z.string().nullable().catch(null).default(null),
   communityHost: z.string().nullable().catch(null).default(null),
+  // The host the relay actually bound its community to on first start. Set once
+  // by main.ts and never changed — the Config action rejects edits once this is
+  // present, and startup always derives RELAY_URL from it.
+  boundHost: z.string().nullable().catch(null).default(null),
   ownerPubkey: z.string().nullable().catch(null).default(null),
   s3Bucket: z
     .string()

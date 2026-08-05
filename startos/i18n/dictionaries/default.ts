@@ -18,7 +18,8 @@ const dict = {
 
   // actions/config.ts
   'Community Host': 19,
-  'The public domain your community is reached at, exactly as added in Buzz Desktop (e.g. buzz1.privkey.io). No scheme, port, or path. The relay binds its community to this host.': 20,
+  'The public clearnet domain your community is reached at, exactly as added in Buzz Desktop (e.g. buzz1.privkey.io). No scheme, port, or path. REQUIREMENTS: (1) a real public domain — Buzz Desktop only trusts standard public certificate authorities, so a LAN .local or Tor .onion address will NOT work; (2) add this domain to Buzz Relay in StartOS with Let’s Encrypt as the ACME provider; (3) port 443 must be publicly reachable on the IP the domain points to. The relay binds its community to this host on first start.': 20,
+  'Set this to your final domain BEFORE starting Buzz Relay for the first time. The relay permanently binds its community to this host on first start, and there is no way to rename or re-point it afterward — changing it strands your existing community, channels, members, and every user’s NIP-05 identity. To move to a different domain you must reset the community (wipe all data) and start over.': 26,
   'Must be a bare lowercase domain name, e.g. buzz1.privkey.io (no https://, no port, no path).': 21,
   'Owner Public Key': 22,
   'Your Nostr public key — makes you the owner/admin of this community. Accepts an npub1… or a 64-character hex key.': 23,

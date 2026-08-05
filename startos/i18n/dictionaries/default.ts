@@ -33,6 +33,14 @@ const dict = {
   'Configure storage and database options for Buzz Relay.': 11,
   'Changes take effect the next time Buzz Relay starts.': 12,
   'Must be 3-63 characters: lowercase letters, numbers, dots or hyphens, starting and ending with a letter or number.': 13,
+
+  // actions/diagnostics.ts
+  Diagnostics: 27,
+  'Show the address to add in Buzz Desktop and the current community and interface state.': 28,
+  'Add your community in Buzz Desktop using the address below. If no public clearnet domain is attached to the interface, Buzz Desktop cannot connect.': 29,
+  'Add This Community in Buzz Desktop': 30,
+  'Public Domains on Interface': 31,
+  'Connection Readiness': 32,
 } as const
 
 /**
